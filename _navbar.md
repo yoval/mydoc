@@ -2,6 +2,7 @@
   * [Main](/)
   * [Python](/python.md)
   * [Mysql](/mysql.md)
+  * [Excel](/excel.md)
   * [R语言](/R.md)
   * [Nodejs](/nodejs.md)
   * [Github](/github.md)
