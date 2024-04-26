@@ -134,3 +134,66 @@ GROUP BY
 ## 数据删除
 
 `DELETE FROM table_name WHERE condition;`
+
+## 实例
+
+### 语句
+
+```mysql
+-- 查询每个门店的上次橙子报货时间、上次柠檬报货时间以及2024年4月的流水金额
+SELECT
+  t1.门店编号,
+  t1.上次橙子报货时间,
+  t1.上次柠檬报货时间,
+  t2.流水金额
+FROM
+  -- 子查询1：获取每个门店的上次橙子报货时间和上次柠檬报货时间
+  (SELECT
+    stat_shop_id AS 门店编号,
+    MAX(CASE WHEN orange_report_cnt > 0 THEN business_date END) AS 上次橙子报货时间,
+    MAX(CASE WHEN is_lemon_report > 0 THEN business_date END) AS 上次柠檬报货时间
+  FROM
+    ads_dbs_report_food_di
+  GROUP BY
+    stat_shop_id) AS t1
+JOIN
+  -- 子查询2：获取每个门店2024年4月的流水金额
+  (SELECT
+    stat_shop_id AS 门店编号,
+    LEFT(business_date, 6) AS 月份,
+    SUM(total_amount) AS 流水金额
+  FROM
+    ads_dbs_report_food_di
+  WHERE
+    LEFT(business_date, 6) = '202404'
+  GROUP BY
+    stat_shop_id, 月份) AS t2
+ON
+  t1.门店编号 = t2.门店编号;
+```
+
+### 说明
+
+`CASE`的语法是
+
+```mysql
+CASE
+  WHEN condition1 THEN result1
+  WHEN condition2 THEN result2
+  ...
+  ELSE resultN
+END
+```
+
+```mysql
+SELECT
+    stat_shop_id as 门店编号,
+    orange_report_cnt as 柠檬报货数量,
+    CASE 
+        WHEN orange_report_cnt > 0 THEN '有报柠檬'
+        WHEN orange_report_cnt IS NULL OR orange_report_cnt <= 0 THEN '未报柠檬'
+    END as 报柠檬状态
+FROM
+    ads_dbs_report_food_di;
+```
+
