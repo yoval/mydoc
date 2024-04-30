@@ -6,4 +6,5 @@
   * [R语言](/R.md)
   * [Nodejs](/nodejs.md)
   * [Github](/github.md)
+  * [Quicker](/quicker.md)
   * [TLL-DATA](http://10.10.3.61:5000/)

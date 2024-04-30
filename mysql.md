@@ -1,5 +1,3 @@
-# Mysql
-
 ## 数据查询
 
 完整语法
@@ -29,171 +27,159 @@ OFFSET 100 从前100行开始返回
 | %                   | 通配符，字符数>0 | <列名> like "%abc%"         |
 | -                   | 通配符，字符数=1 | <列名> like "abc-"          |
 
-### 特殊关键词
-
-- `DISTINCT` 唯一值，如 `SELECT DISTINCT <列名> FROM <表名>`
-
-- `NULL` 空值，如`SELECT * FROM <表名> WHERE <列名> IS NOT NULL`
-
-  
-
-### 多表查询
-
-类似excel的xlookup，两张表有相同的列，用`JOIN`进行拼接。
-
-其中：
-
-- LEFT JOIN ，把第二张表匹配到第一张表，保留第一张表的所有行。
-- RIGHT JOIN ，把第一张表匹配到第二张表，保留第二张表的所有行。
-- INNER JOIN （JOIN），只会保留两个表都存在的行。
-- FULL JOIN，保留两张表的所有行。
+## 查询解析
 
 ```mysql
+-- 公共表表达式（CTE）
+WITH variables AS (
+    -- 定义变量
+    SELECT 'TLL06486' AS shop_id, 20240101 AS start_date, 20240426 AS end_date
+),
+-- 联合所有查询的CTE
+combined AS (
+    -- 从两个表中选取数据并添加source列
+    SELECT
+        stat_shop_id,
+        report_amount,
+        NULL AS total_amount,
+        'ads_dbs_report_food_di' AS source
+    FROM
+        ads_dbs_report_food_di
+    JOIN
+        variables
+    ON
+        ads_dbs_report_food_di.stat_shop_id = variables.shop_id
+        AND ads_dbs_report_food_di.business_date BETWEEN variables.start_date AND variables.end_date
+    UNION ALL
+    SELECT
+        stat_shop_id,
+        NULL,
+        total_amount,
+        'ads_dbs_trade_shop_di' AS source
+    FROM
+        ads_dbs_trade_shop_di
+    JOIN
+        variables
+    ON
+        ads_dbs_trade_shop_di.stat_shop_id = variables.shop_id
+        AND ads_dbs_trade_shop_di.business_date BETWEEN variables.start_date AND variables.end_date
+)
+-- 根据门店编号分组并计算报货金额和流水金额的总和
 SELECT
-  <表名1>.<列名1>,
-  <表名2>.<列名2>,
+    stat_shop_id AS 门店编号,
+    SUM(CASE WHEN source = 'ads_dbs_report_food_di' THEN report_amount / 0.8 ELSE 0 END) AS 报货金额,
+    SUM(CASE WHEN source = 'ads_dbs_trade_shop_di' THEN total_amount ELSE 0 END) AS 流水金额
 FROM
-  <表名1>
-  INNER JOIN <表名2> ON <表名1>.<共同列> = <表名2>.<共同列>;
-WHERE ...
-```
-
-### 表达式查询
-
-```mysql
-SELECT
-  business_date AS 日期,
-  stat_shop_name AS 门店名称,
-  report_amount/0.8 AS 报货金额
-FROM
-  ads_dbs_report_food_di
-```
-
-- `AS`，给表达式取了个别名，它同时可以给表、普通列取别名。
-- `report_amount/0.8 ` 选取数据可以直接是表达式。
-
-### 统计函数
-
-数据库是先对数据做`WHERE`，然后对结果做`GROUP BY` 。
-
-| 函数                    | 含义                                                         |
-| ----------------------- | ------------------------------------------------------------ |
-| COUNT(*), COUNT(column) | 计数！COUNT(*) 统计数据行数，COUNT(column) 统计column非NULL的行数. |
-| MIN(column)             | 找column最小的一行.                                          |
-| MAX(column)             | 找column最大的一行.                                          |
-| AVG(column)             | 对column所有行取平均值.                                      |
-| SUM(column)             | 对column所有行求和.                                          |
-
-例，将报货金额进行求和。
-
-```mysql
-SELECT
-  stat_shop_name AS 门店名称,
-  SUM(report_amount) / 0.8 AS 报货金额
-FROM
-  ads_dbs_report_food_di
+    combined
 GROUP BY
-  stat_shop_name
+    门店编号;
+
 ```
 
-- `HAVING` 函数，对`GROUP BY`再“`WHERE`”一次，一般没啥必要。
+## 常用函数
 
-### 其它内置函数
+### WITH
 
-#### 日期函数
+WITH 关键字在 SQL 中用于创建一个临时名称的结果集，也称为公共表表达式（Common Table Expression，CTE）。它可以在同一个查询中被多次引用，从而简化查询、提高性能和可读性。
 
-| 函数          | 描述                                   |
-| ------------- | -------------------------------------- |
-| NOW()         | 返回当前日期和时间。`SELECT NOW()`     |
-| CURDATE()     | 返回当前日期。`SELECT CURDATE()`       |
-| CURTIME()     | 返回当前时间。`SELECT CURTIME()`       |
-| DATE()        | 提取日期或日期时间表达式的日期部分。   |
-| DAY()         | 返回月份中的一天（0-31）。             |
-| DAYNAME()     | 返回工作日的名称。星期几（英文）       |
-| MONTH()       | 返回经过日期（1-12）的月份。           |
-| MONTHNAME()   | 返回月份的名称。                       |
-| YEAR()        | 返回年份。                             |
-| DATE_FORMAT() | 以其他格式显示日期和时间值。           |
-| EXTRACT()     | 提取日期的一部分。                     |
-| DATE_ADD()    | 将指定的时间值（或间隔）添加到日期值。 |
-| DATE_SUB()    | 从日期值中减去指定的时间值（或间隔）。 |
-| DATEDIFF()    | 返回两个日期之间的天数                 |
-
-
-
-
-
-## 插入数据
-
-`INSERT INTO table_name (column1,column2,...) VALUES (value1,value2,...);`
-
-## 数据修改
-
-`UPDATE table_name SET column1_name = value1, column2_name = value2,...WHERE condition;`
-
-## 数据删除
-
-`DELETE FROM table_name WHERE condition;`
-
-## 实例
-
-### 语句
+CTE，可以进行调用
 
 ```mysql
--- 查询每个门店的上次橙子报货时间、上次柠檬报货时间以及2024年4月的流水金额
-SELECT
-  t1.门店编号,
-  t1.上次橙子报货时间,
-  t1.上次柠檬报货时间,
-  t2.流水金额
-FROM
-  -- 子查询1：获取每个门店的上次橙子报货时间和上次柠檬报货时间
-  (SELECT
-    stat_shop_id AS 门店编号,
-    MAX(CASE WHEN orange_report_cnt > 0 THEN business_date END) AS 上次橙子报货时间,
-    MAX(CASE WHEN is_lemon_report > 0 THEN business_date END) AS 上次柠檬报货时间
-  FROM
-    ads_dbs_report_food_di
-  GROUP BY
-    stat_shop_id) AS t1
-JOIN
-  -- 子查询2：获取每个门店2024年4月的流水金额
-  (SELECT
-    stat_shop_id AS 门店编号,
-    LEFT(business_date, 6) AS 月份,
-    SUM(total_amount) AS 流水金额
-  FROM
-    ads_dbs_report_food_di
-  WHERE
-    LEFT(business_date, 6) = '202404'
-  GROUP BY
-    stat_shop_id, 月份) AS t2
-ON
-  t1.门店编号 = t2.门店编号;
+WITH variables AS (
+    SELECT 'TLL06486' AS shop_id, 20240101 AS start_date, 20240426 AS end_date
+)
+SELECT *
+FROM variables;
 ```
 
-### 说明
-
-`CASE`的语法是
+子查询，别名
 
 ```mysql
-CASE
-  WHEN condition1 THEN result1
-  WHEN condition2 THEN result2
-  ...
-  ELSE resultN
-END
+SELECT *
+FROM (
+    SELECT 'TLL06486' AS shop_id, 20240101 AS start_date, 20240426 AS end_date
+) AS shop_data;
+
 ```
+
+### UNION
+
+`UNION`与`UNION ALL`
+
+上下拼接，查询列顺序必须相同，可以使用别名。UNION 会删除结果中的重复行，包含数据库本身的重复行。UNION ALL 不会。
 
 ```mysql
-SELECT
-    stat_shop_id as 门店编号,
-    orange_report_cnt as 柠檬报货数量,
-    CASE 
-        WHEN orange_report_cnt > 0 THEN '有报柠檬'
-        WHEN orange_report_cnt IS NULL OR orange_report_cnt <= 0 THEN '未报柠檬'
-    END as 报柠檬状态
-FROM
-    ads_dbs_report_food_di;
+WITH orders AS (
+  SELECT 1 AS id, '2023-03-01' AS order_date, 100 AS total_amount, 'paid' AS status
+  UNION ALL
+  SELECT 2 AS id, '2023-03-02' AS order_date, 200 AS total_amount, 'paid' AS status
+  UNION ALL
+  SELECT 3 AS id, '2023-03-03' AS order_date, 300 AS total_amount, 'unpaid' AS status
+  UNION ALL
+  SELECT 4 AS id, '2023-03-04' AS order_date, 400 AS total_amount, 'paid' AS status
+),
+paid_orders AS (
+  SELECT id, order_date, total_amount
+  FROM orders
+  WHERE status = 'paid'
+),
+unpaid_orders AS (
+  SELECT id, order_date, total_amount
+  FROM orders
+  WHERE status = 'unpaid'
+)
+SELECT id, order_date, total_amount
+FROM paid_orders
+UNION ALL
+SELECT id, order_date, total_amount
+FROM unpaid_orders;
+
 ```
 
+### JOIN 
+
+```mysql
+WITH users AS (
+  SELECT 1 AS id, 'Alice' AS name, 25 AS age
+  UNION ALL
+  SELECT 2 AS id, 'Bob' AS name, 30 AS age
+  UNION ALL
+  SELECT 3 AS id, 'Charlie' AS name, 35 AS age
+),
+orders AS (
+  SELECT 1 AS id, 1 AS user_id, '2023-03-01' AS order_date, 100 AS total_amount
+  UNION ALL
+  SELECT 2 AS id, 1 AS user_id, '2023-03-02' AS order_date, 200 AS total_amount
+  UNION ALL
+  SELECT 3 AS id, 2 AS user_id, '2023-03-03' AS order_date, 300 AS total_amount
+)
+SELECT u.id, u.name, u.age, o.id AS order_id, o.order_date, o.total_amount
+FROM users AS u
+RIGHT JOIN orders AS o
+ON u.id = o.user_id;
+```
+
+## CASE
+
+1.返回固定值
+
+```mysql
+WITH numbers AS (
+  SELECT 1 AS num
+  UNION ALL
+  SELECT 2 AS num
+  UNION ALL
+  SELECT 3 AS num
+)
+SELECT num,
+       CASE
+           WHEN num = 1 THEN 'one'
+           WHEN num = 2 THEN 'two'
+           WHEN num = 3 THEN 'three'
+           ELSE 'other'
+       END AS num_text
+FROM numbers;
+
+```
+
+2.
