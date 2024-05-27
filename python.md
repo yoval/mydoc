@@ -1,34 +1,25 @@
-# Python基础
-## 可变参数
+# Python Pandas
 
-### 位置参数（`*args`）
-
-当在函数定义中使用 `*args`时，它将捕获所有传递给函数的位置参数，并将它们作为一个元组（tuple）存储。
-
-例：
+### 保存`DataFrame`至excel不同的sheet。
 
 ```python
-def TYPE(*args):
-    total = 0
-    type_ = type(args)
-    return type_
-print(TYPE(1)) #<class 'tuple'>
+import pandas as pd
+import numpy as np
+import openpyxl
+
+with pd.ExcelWriter(output_filename, engine='openpyxl') as writer:
+    df1.to_excel(writer, sheet_name='表1', index=False)
+    df2.to_excel(writer, sheet_name='表2', index=False)
+    df3.to_excel(writer, sheet_name='表3', index=False)
 ```
 
-### 关键字参数（`**kwargs`）
-
-当在函数定义中使用 `**kwargs` 时，它将捕获所有传递给函数的关键字参数，并将它们作为一个字典(dict)存储。
+### Pandas 的筛选
 
 ```python
-def print_info(**kwargs):
-    print(type(kwargs))
-    for key, value in kwargs.items():
-        print(f"{key}: {value}")
+import pandas as pd
+import numpy as np
 
-print_info(name="Alice", age=30, city="New York")
-
-# 传入字典
-info = {'name': "Alice", 'age': 30, 'city': "New York"}
-print_info(**info)
+mask = merge_df['门店编码'].isin(['ZYD00203', 'ZYD00204', 'ZYD00205', 'ZYD00206'])
+merge_df = merge_df.drop(merge_df[mask].index)
 ```
 
